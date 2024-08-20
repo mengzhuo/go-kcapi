@@ -7,13 +7,18 @@ Use KCAPI like standary Go crypto/* do.
 ### Usage
 
 ```go
-import "github.com/mengzhuo/go-kcapi/sha1"
+package main
+
+import (
+    "fmt"
+    "github.com/mengzhuo/go-kcapi/sha1"
+)
 
 func main() {
     h, _ := sha1.New()
-    h.Write("Hello World")
+    h.Write([]byte("Hello World"))
     r := h.Sum(nil)
-    fmt.Println("%x", r)
+    fmt.Printf("%x", r) // 0a4d55a8d778e5022fab701977c5d840bbc486d0
 }
 
 ```
