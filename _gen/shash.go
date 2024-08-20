@@ -22,7 +22,7 @@ type shash struct {
 
 var testcases = []string{
 	"quick fox jump over the lazy dog",
-	"foo, bar are temporary values in computer programing",
+	"foo, bar",
 }
 
 var shashTab = []shash{
@@ -32,6 +32,9 @@ var shashTab = []shash{
 	{"sha256", "SHA-2 256 hash algorithm", 64, 32, nil},
 	{"sha384", "SHA-2 384 hash algorithm", 128, 48, nil},
 	{"sha512", "SHA-2 512 hash algorithm", 128, 64, nil},
+	//{"sha3-256", "SHA-3 256 bits hash algorithm", 136, 32, nil},
+	//{"sha3-384", "SHA-3 384 bits hash algorithm", 104, 48, nil},
+	//{"sha3-512", "SHA-3 512 bits hash algorithm", 72, 64, nil},
 }
 
 var (
@@ -46,17 +49,23 @@ var (
 
 func runHash(hcmd string, v string) string {
 	var cmd string
+	var args []string
+	var fields = 0
 	switch hcmd {
+	case "sha3-256", "sha3-384", "sha3-512":
+		cmd = "openssl"
+		args = append(args, "dgst", "-"+hcmd)
+		fields = 1
 	default:
 		cmd = hcmd + "sum"
 	}
-	c := exec.Command(cmd)
+	c := exec.Command(cmd, args...)
 	c.Stdin = strings.NewReader(v)
 	o, err := c.Output()
 	if err != nil {
 		panic(err)
 	}
-	return string(bytes.Fields(o)[0])
+	return string(bytes.Fields(o)[fields])
 }
 
 func main() {

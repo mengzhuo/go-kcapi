@@ -9,7 +9,7 @@ import (
 
 var SHash = map[string]string{
 
-	`foo, bar are temporary values in computer programing`: `fb93a75584591b49ff7579dc5cab32c953148544f21761abbf53d87766aa5085`,
+	`foo, bar`: `c6250c6a27394fbb4618655b01a2b46e7f0e5785a814404ec9490a4ea2ea5ca8`,
 
 	`quick fox jump over the lazy dog`: `61b168729ac240e31be802f2506a7c37bc2dcfada6352e0ba625d2006cfe85c2`,
 }
