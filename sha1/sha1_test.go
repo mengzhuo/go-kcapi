@@ -2,6 +2,8 @@ package sha1_test
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/mengzhuo/go-kcapi/sha1"
@@ -27,6 +29,19 @@ func TestSHashSHA1(t *testing.T) {
 			t.Errorf("sha1(%s) = %x, expect %x", k, khr, v)
 		}
 	}
+}
+
+func TestSHashSHA1File(t *testing.T) {
+	kh, err := sha1.New()
+	f, err := os.Open("sha1.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	n, err := io.Copy(kh, f)
+	if err != nil {
+		t.Error(n, err)
+	}
+	t.Logf("%x", kh.Sum(nil))
 }
 
 var bechSize = []int{8, 1024, 8192, 16384}
