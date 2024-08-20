@@ -1,7 +1,8 @@
 # Go KCAPI
 
 Pure Go binding for Linux Kernel Crypto API
-Use KCAPI like stdandary Go crypto/* do.
+
+Use KCAPI like standary Go crypto/* do.
 
 ### Usage
 
