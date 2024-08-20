@@ -9,10 +9,9 @@ import (
 
 var SHash = map[string]string{
 
-	`foo, bar are temporary values in computer programing`:`3d6790fa5c76b013e56ad028a10ee5f5acd14647cf56de54a46b4a1195bdcd81b31899bbd0edd294761c97380fbc0a3e`,
+	`foo, bar are temporary values in computer programing`: `3d6790fa5c76b013e56ad028a10ee5f5acd14647cf56de54a46b4a1195bdcd81b31899bbd0edd294761c97380fbc0a3e`,
 
-	`quick fox jump over the lazy dog`:`38aff9da60fbfa4cf0cb28ef4d060fd26ae440c7d691726fab3dd81cf491ad601d7ac288cc74660f53f2011e81cceae1`,
-
+	`quick fox jump over the lazy dog`: `38aff9da60fbfa4cf0cb28ef4d060fd26ae440c7d691726fab3dd81cf491ad601d7ac288cc74660f53f2011e81cceae1`,
 }
 
 func TestSHashSHA384(t *testing.T) {

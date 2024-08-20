@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	Size = 48
+	Size      = 48
 	BlockSize = 128
 )
 

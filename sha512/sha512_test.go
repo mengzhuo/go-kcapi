@@ -9,10 +9,9 @@ import (
 
 var SHash = map[string]string{
 
-	`foo, bar are temporary values in computer programing`:`d5cda4c763f9c77758015430bc8e3852da8cb2038d4b99efbd6a71fbaf4cef94ff0de22236cb824b7c6a154614babb1fdbca5685a4cc6ddd7711d2c8a0bc28d9`,
+	`foo, bar are temporary values in computer programing`: `d5cda4c763f9c77758015430bc8e3852da8cb2038d4b99efbd6a71fbaf4cef94ff0de22236cb824b7c6a154614babb1fdbca5685a4cc6ddd7711d2c8a0bc28d9`,
 
-	`quick fox jump over the lazy dog`:`38453030abd6839ef5bf2294ef4ba2d3f72a845b866305409d97999f99fad3076ca2e69623b59328a850d574cd492f2bc5ca3476ba2262bfe5236a5370cdd522`,
-
+	`quick fox jump over the lazy dog`: `38453030abd6839ef5bf2294ef4ba2d3f72a845b866305409d97999f99fad3076ca2e69623b59328a850d574cd492f2bc5ca3476ba2262bfe5236a5370cdd522`,
 }
 
 func TestSHashSHA512(t *testing.T) {
