@@ -25,7 +25,7 @@ func TestSHashMD5(t *testing.T) {
 
 	cmd := exec.Command("md5sum")
 	cmd.Stdin = bytes.NewReader(bytes.Repeat(buf, 2))
-	out, err := cmd.Output()
+	out, _ := cmd.Output()
 	f := string(bytes.Fields(out)[0])
 	if f != fmt.Sprintf("%x", khr) {
 		t.Errorf("%s != %x", f, khr)
