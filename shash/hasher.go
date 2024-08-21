@@ -25,6 +25,7 @@ func (h *Hash) Sum(p []byte) []byte {
 	if len(p) != 0 {
 		h.Write(p)
 	}
+	h.f.Sync()
 	r := make([]byte, h.size)
 	h.f.Read(r)
 	return r

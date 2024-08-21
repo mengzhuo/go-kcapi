@@ -85,3 +85,35 @@ func BenchmarkSHashSHA1(b *testing.B) {
 		})
 	}
 }
+
+var fileSize = []int{1 << 20, 4 << 20, 16 << 20, 64 << 20}
+
+func BenchmarkSHashSHA1File(b *testing.B) {
+	for _, bs := range fileSize {
+		b.Run(fmt.Sprintf("%d", bs), func(b *testing.B) {
+			tmp, err := os.CreateTemp("", "")
+			if err != nil {
+				b.Fatal(err)
+			}
+			defer os.Remove(tmp.Name())
+
+			io.CopyN(tmp, rand.Reader, int64(bs))
+			tmp.Sync()
+
+			bench, err := sha1.New()
+			if err != nil {
+				b.Fatal(err)
+			}
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			b.SetBytes(int64(bs))
+			for i := 0; i < b.N; i++ {
+				bench.Reset()
+				tmp.Seek(0, io.SeekStart)
+				io.Copy(bench, tmp)
+				bench.Sum(nil)
+			}
+		})
+	}
+}
