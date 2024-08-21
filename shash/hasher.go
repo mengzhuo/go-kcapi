@@ -13,7 +13,6 @@ import (
 
 type Hash struct {
 	f      *os.File
-	fd     int
 	addr   *unix.SockaddrALG
 	hashfd int
 	name   string
@@ -36,13 +35,7 @@ func (h *Hash) Reset() {
 }
 
 func (h *Hash) Close() error {
-	err := h.f.Close()
-	if err != nil {
-		return err
-	}
-
-	err = unix.Close(h.fd)
-	return err
+	return h.f.Close()
 }
 
 func (h *Hash) Write(p []byte) (n int, err error) {
@@ -64,6 +57,7 @@ func NewHash(name string, size int, bs int) (*Hash, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer unix.Close(fd)
 
 	addr := &unix.SockaddrALG{Type: "hash", Name: name}
 	err = unix.Bind(fd, addr)
@@ -80,7 +74,6 @@ func NewHash(name string, size int, bs int) (*Hash, error) {
 	f := os.NewFile(hashfd, name)
 	h := &Hash{
 		f:      f,
-		fd:     fd,
 		hashfd: int(hashfd),
 		name:   name,
 		addr:   addr,
