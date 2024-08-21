@@ -1,31 +1,68 @@
 package sha224_test
 
 import (
+	"bytes"
+	"crypto/rand"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/mengzhuo/go-kcapi/sha224"
 )
 
-var SHash = map[string]string{
+func TestSHashSHA224(t *testing.T) {
+	buf := make([]byte, os.Getpagesize())
+	rand.Read(buf)
+	kh, err := sha224.New()
+	if err != nil {
+		t.Skip(err)
+	}
+	kh.Write(buf)
+	kh.Write(buf) // double write for msg handle
+	khr := kh.Sum(nil)
 
-	`foo, bar`: `25da7ab3048ffe025c762b6ed203dab80204c81d7175bbb7f3009790`,
-
-	`quick fox jump over the lazy dog`: `533550497d7fa7b6f9405f5b53b29ed84bac54a70c4101d6257de3f1`,
+	cmd := exec.Command("sha224sum")
+	cmd.Stdin = bytes.NewReader(bytes.Repeat(buf, 2))
+	out, err := cmd.Output()
+	f := string(bytes.Fields(out)[0])
+	if f != fmt.Sprintf("%x", khr) {
+		t.Errorf("%s != %x", f, khr)
+	}
 }
 
-func TestSHashSHA224(t *testing.T) {
-	for k, v := range SHash {
-		kh, err := sha224.New()
-		if err != nil {
-			t.Skip(err)
-		}
-		kh.Write([]byte(k))
-		khr := kh.Sum(nil)
-		khhex := fmt.Sprintf("%x", khr)
-		if v != khhex {
-			t.Errorf("sha224(%s) = %x, expect %x", k, khr, v)
-		}
+func TestSHashSHA224File(t *testing.T) {
+	kh, err := sha224.New()
+	if err != nil {
+		t.Skip(err)
+	}
+
+	tf, err := os.CreateTemp("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tf.Name())
+
+	n, err := io.CopyN(tf, rand.Reader, 16<<20)
+	if err != nil {
+		t.Error(n, err)
+	}
+
+	tf.Sync()
+	tf.Seek(0, io.SeekStart)
+
+	io.Copy(kh, tf)
+	khr := kh.Sum(nil)
+
+	out, err := exec.Command("sha224sum", tf.Name()).Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	field := string(bytes.Fields(out)[0])
+	if field != fmt.Sprintf("%x", khr) {
+		t.Errorf("%s != %x", field, khr)
 	}
 }
 

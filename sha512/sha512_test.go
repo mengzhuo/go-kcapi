@@ -1,31 +1,68 @@
 package sha512_test
 
 import (
+	"bytes"
+	"crypto/rand"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/mengzhuo/go-kcapi/sha512"
 )
 
-var SHash = map[string]string{
+func TestSHashSHA512(t *testing.T) {
+	buf := make([]byte, os.Getpagesize())
+	rand.Read(buf)
+	kh, err := sha512.New()
+	if err != nil {
+		t.Skip(err)
+	}
+	kh.Write(buf)
+	kh.Write(buf) // double write for msg handle
+	khr := kh.Sum(nil)
 
-	`foo, bar`: `2ec46786170afdb0e63f6da2ac71dba75f2e8990d4964f6f48a393591a4ec65a4d0c89d2cc1cd3ac03dd8a38e656caba681193f32ee8d947b557f18828cba94b`,
-
-	`quick fox jump over the lazy dog`: `38453030abd6839ef5bf2294ef4ba2d3f72a845b866305409d97999f99fad3076ca2e69623b59328a850d574cd492f2bc5ca3476ba2262bfe5236a5370cdd522`,
+	cmd := exec.Command("sha512sum")
+	cmd.Stdin = bytes.NewReader(bytes.Repeat(buf, 2))
+	out, err := cmd.Output()
+	f := string(bytes.Fields(out)[0])
+	if f != fmt.Sprintf("%x", khr) {
+		t.Errorf("%s != %x", f, khr)
+	}
 }
 
-func TestSHashSHA512(t *testing.T) {
-	for k, v := range SHash {
-		kh, err := sha512.New()
-		if err != nil {
-			t.Skip(err)
-		}
-		kh.Write([]byte(k))
-		khr := kh.Sum(nil)
-		khhex := fmt.Sprintf("%x", khr)
-		if v != khhex {
-			t.Errorf("sha512(%s) = %x, expect %x", k, khr, v)
-		}
+func TestSHashSHA512File(t *testing.T) {
+	kh, err := sha512.New()
+	if err != nil {
+		t.Skip(err)
+	}
+
+	tf, err := os.CreateTemp("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tf.Name())
+
+	n, err := io.CopyN(tf, rand.Reader, 16<<20)
+	if err != nil {
+		t.Error(n, err)
+	}
+
+	tf.Sync()
+	tf.Seek(0, io.SeekStart)
+
+	io.Copy(kh, tf)
+	khr := kh.Sum(nil)
+
+	out, err := exec.Command("sha512sum", tf.Name()).Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	field := string(bytes.Fields(out)[0])
+	if field != fmt.Sprintf("%x", khr) {
+		t.Errorf("%s != %x", field, khr)
 	}
 }
 

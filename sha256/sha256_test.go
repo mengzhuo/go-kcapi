@@ -1,31 +1,68 @@
 package sha256_test
 
 import (
+	"bytes"
+	"crypto/rand"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/mengzhuo/go-kcapi/sha256"
 )
 
-var SHash = map[string]string{
+func TestSHashSHA256(t *testing.T) {
+	buf := make([]byte, os.Getpagesize())
+	rand.Read(buf)
+	kh, err := sha256.New()
+	if err != nil {
+		t.Skip(err)
+	}
+	kh.Write(buf)
+	kh.Write(buf) // double write for msg handle
+	khr := kh.Sum(nil)
 
-	`foo, bar`: `c6250c6a27394fbb4618655b01a2b46e7f0e5785a814404ec9490a4ea2ea5ca8`,
-
-	`quick fox jump over the lazy dog`: `61b168729ac240e31be802f2506a7c37bc2dcfada6352e0ba625d2006cfe85c2`,
+	cmd := exec.Command("sha256sum")
+	cmd.Stdin = bytes.NewReader(bytes.Repeat(buf, 2))
+	out, err := cmd.Output()
+	f := string(bytes.Fields(out)[0])
+	if f != fmt.Sprintf("%x", khr) {
+		t.Errorf("%s != %x", f, khr)
+	}
 }
 
-func TestSHashSHA256(t *testing.T) {
-	for k, v := range SHash {
-		kh, err := sha256.New()
-		if err != nil {
-			t.Skip(err)
-		}
-		kh.Write([]byte(k))
-		khr := kh.Sum(nil)
-		khhex := fmt.Sprintf("%x", khr)
-		if v != khhex {
-			t.Errorf("sha256(%s) = %x, expect %x", k, khr, v)
-		}
+func TestSHashSHA256File(t *testing.T) {
+	kh, err := sha256.New()
+	if err != nil {
+		t.Skip(err)
+	}
+
+	tf, err := os.CreateTemp("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tf.Name())
+
+	n, err := io.CopyN(tf, rand.Reader, 16<<20)
+	if err != nil {
+		t.Error(n, err)
+	}
+
+	tf.Sync()
+	tf.Seek(0, io.SeekStart)
+
+	io.Copy(kh, tf)
+	khr := kh.Sum(nil)
+
+	out, err := exec.Command("sha256sum", tf.Name()).Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	field := string(bytes.Fields(out)[0])
+	if field != fmt.Sprintf("%x", khr) {
+		t.Errorf("%s != %x", field, khr)
 	}
 }
 

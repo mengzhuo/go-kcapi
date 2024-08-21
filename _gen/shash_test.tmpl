@@ -1,30 +1,69 @@
 package {{.Name}}_test
 
 import (
+	"bytes"
+	"crypto/rand"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/mengzhuo/go-kcapi/{{.Name}}"
 )
 
-var SHash = map[string]string{
-{{range $k, $v := .TestCases}}
-	`{{ $k }}`:`{{ $v }}`,
-{{end}}
-}
 
 func TestSHash{{ .Name | title }}(t *testing.T) {
-	for k, v := range SHash {
-		kh, err := {{.Name}}.New()
-		if err != nil {
-			t.Skip(err)
-		}
-		kh.Write([]byte(k))
-		khr := kh.Sum(nil)
-		khhex := fmt.Sprintf("%x", khr)
-		if v != khhex {
-			t.Errorf("{{.Name}}(%s) = %x, expect %x", k, khr, v)
-		}
+	buf := make([]byte, os.Getpagesize())
+	rand.Read(buf)
+	kh, err := {{.Name}}.New()
+	if err != nil {
+		t.Skip(err)
+	}
+	kh.Write(buf)
+	kh.Write(buf) // double write for msg handle
+	khr := kh.Sum(nil)
+
+	cmd := exec.Command("{{.System.Command}}")
+	cmd.Stdin = bytes.NewReader(bytes.Repeat(buf, 2))
+	out, err := cmd.Output()
+	f := string(bytes.Fields(out)[{{.System.Field}}])
+	if f != fmt.Sprintf("%x", khr) {
+		t.Errorf("%s != %x", f, khr)
+	}
+}
+
+func TestSHash{{ .Name | title }}File(t *testing.T) {
+	kh, err := {{.Name}}.New()
+	if err != nil {
+		t.Skip(err)
+	}
+
+	tf, err := os.CreateTemp("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tf.Name())
+
+	n, err := io.CopyN(tf, rand.Reader, 16<<20)
+	if err != nil {
+		t.Error(n, err)
+	}
+
+	tf.Sync()
+	tf.Seek(0, io.SeekStart)
+
+	io.Copy(kh, tf)
+	khr := kh.Sum(nil)
+
+	out, err := exec.Command("{{.System.Command}}", tf.Name()).Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	field := string(bytes.Fields(out)[{{.System.Field}}])
+	if field != fmt.Sprintf("%x", khr) {
+		t.Errorf("%s != %x", field, khr)
 	}
 }
 

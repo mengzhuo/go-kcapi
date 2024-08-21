@@ -1,31 +1,68 @@
 package sha384_test
 
 import (
+	"bytes"
+	"crypto/rand"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/mengzhuo/go-kcapi/sha384"
 )
 
-var SHash = map[string]string{
+func TestSHashSHA384(t *testing.T) {
+	buf := make([]byte, os.Getpagesize())
+	rand.Read(buf)
+	kh, err := sha384.New()
+	if err != nil {
+		t.Skip(err)
+	}
+	kh.Write(buf)
+	kh.Write(buf) // double write for msg handle
+	khr := kh.Sum(nil)
 
-	`foo, bar`: `ec3eaab9ebf9564e663d5374eff570c9b7cff1bbd0a6144579d2ac317a1bdaa7398102b0fd12385ebcf5464fb531225d`,
-
-	`quick fox jump over the lazy dog`: `38aff9da60fbfa4cf0cb28ef4d060fd26ae440c7d691726fab3dd81cf491ad601d7ac288cc74660f53f2011e81cceae1`,
+	cmd := exec.Command("sha384sum")
+	cmd.Stdin = bytes.NewReader(bytes.Repeat(buf, 2))
+	out, err := cmd.Output()
+	f := string(bytes.Fields(out)[0])
+	if f != fmt.Sprintf("%x", khr) {
+		t.Errorf("%s != %x", f, khr)
+	}
 }
 
-func TestSHashSHA384(t *testing.T) {
-	for k, v := range SHash {
-		kh, err := sha384.New()
-		if err != nil {
-			t.Skip(err)
-		}
-		kh.Write([]byte(k))
-		khr := kh.Sum(nil)
-		khhex := fmt.Sprintf("%x", khr)
-		if v != khhex {
-			t.Errorf("sha384(%s) = %x, expect %x", k, khr, v)
-		}
+func TestSHashSHA384File(t *testing.T) {
+	kh, err := sha384.New()
+	if err != nil {
+		t.Skip(err)
+	}
+
+	tf, err := os.CreateTemp("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tf.Name())
+
+	n, err := io.CopyN(tf, rand.Reader, 16<<20)
+	if err != nil {
+		t.Error(n, err)
+	}
+
+	tf.Sync()
+	tf.Seek(0, io.SeekStart)
+
+	io.Copy(kh, tf)
+	khr := kh.Sum(nil)
+
+	out, err := exec.Command("sha384sum", tf.Name()).Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	field := string(bytes.Fields(out)[0])
+	if field != fmt.Sprintf("%x", khr) {
+		t.Errorf("%s != %x", field, khr)
 	}
 }
 

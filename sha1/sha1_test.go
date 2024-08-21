@@ -1,47 +1,69 @@
 package sha1_test
 
 import (
+	"bytes"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/mengzhuo/go-kcapi/sha1"
 )
 
-var SHash = map[string]string{
-
-	`foo, bar`: `532599fa0da64fb9f088830f8626d71dc6c077f0`,
-
-	`quick fox jump over the lazy dog`: `84c7b0c197329f42869e7bd7567e84448215fef7`,
-}
-
 func TestSHashSHA1(t *testing.T) {
-	for k, v := range SHash {
-		kh, err := sha1.New()
-		if err != nil {
-			t.Skip(err)
-		}
-		kh.Write([]byte(k))
-		khr := kh.Sum(nil)
-		khhex := fmt.Sprintf("%x", khr)
-		if v != khhex {
-			t.Errorf("sha1(%s) = %x, expect %x", k, khr, v)
-		}
+	buf := make([]byte, os.Getpagesize())
+	rand.Read(buf)
+	kh, err := sha1.New()
+	if err != nil {
+		t.Skip(err)
+	}
+	kh.Write(buf)
+	kh.Write(buf) // double write for msg handle
+	khr := kh.Sum(nil)
+
+	cmd := exec.Command("sha1sum")
+	cmd.Stdin = bytes.NewReader(bytes.Repeat(buf, 2))
+	out, err := cmd.Output()
+	f := string(bytes.Fields(out)[0])
+	if f != fmt.Sprintf("%x", khr) {
+		t.Errorf("%s != %x", f, khr)
 	}
 }
 
 func TestSHashSHA1File(t *testing.T) {
 	kh, err := sha1.New()
-	f, err := os.Open("sha1.go")
+	if err != nil {
+		t.Skip(err)
+	}
+
+	tf, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	n, err := io.Copy(kh, f)
+	defer os.Remove(tf.Name())
+
+	n, err := io.CopyN(tf, rand.Reader, 16<<20)
 	if err != nil {
 		t.Error(n, err)
 	}
-	t.Logf("%x", kh.Sum(nil))
+
+	tf.Sync()
+	tf.Seek(0, io.SeekStart)
+
+	io.Copy(kh, tf)
+	khr := kh.Sum(nil)
+
+	out, err := exec.Command("sha1sum", tf.Name()).Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	field := string(bytes.Fields(out)[0])
+	if field != fmt.Sprintf("%x", khr) {
+		t.Errorf("%s != %x", field, khr)
+	}
 }
 
 var bechSize = []int{8, 1024, 8192, 16384}
