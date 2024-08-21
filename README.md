@@ -1,5 +1,8 @@
 # Go KCAPI
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/mengzhuo/go-kcapi.svg)](https://pkg.go.dev/github.com/mengzhuo/go-kcapi)
+[![Go Report Card](https://goreportcard.com/badge/github.com/mengzhuo/go-kcapi)](https://goreportcard.com/report/github.com/mengzhuo/go-kcapi)
+
 Pure Go binding for Linux Kernel Crypto API
 
 Use KCAPI like standary Go crypto/* do.
