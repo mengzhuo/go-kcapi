@@ -16,29 +16,23 @@ func TestCBCEncrypt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	kp := make([]byte, 32)
-	krp := make([]byte, 32)
-	copy(kp[:], c)
-	copy(kp[16:], c)
-	enc.CryptBlocks(krp, kp[:16])
-	enc.CryptBlocks(krp[16:], kp[16:])
+	p := bytes.Repeat([]byte(c), 256)
+	enc.CryptBlocks(p[:2048], p[:2048])
+	enc.CryptBlocks(p[2048:], p[2048:])
 
 	// Std
 	block, err := aes.NewCipher(bytes.Repeat([]byte(c), 2))
 	if err != nil {
 		t.Fatal(err)
 	}
-	sp := make([]byte, 32)
-	copy(sp[:], c)
-	copy(sp[16:], c)
+	sp := bytes.Repeat([]byte(c), 256)
 	se := cipher.NewCBCEncrypter(block, []byte(c))
 	if err != nil {
 		t.Fatal(err)
 	}
-	se.CryptBlocks(sp[:16], sp[:16])
-	se.CryptBlocks(sp[16:], sp[16:])
-	if !bytes.Equal(sp, krp) {
-		t.Errorf("expecting=%x got=%x", sp, krp)
+	se.CryptBlocks(sp, sp)
+	if !bytes.Equal(sp, p) {
+		t.Errorf("expecting=%x got=%x", sp[:10], p[:10])
 	}
 }
 
@@ -47,10 +41,10 @@ func BenchmarkCBCEncrypto(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	p := make([]byte, 16)
+	p := make([]byte, 4096)
 	b.ResetTimer()
 	b.ReportAllocs()
-	b.SetBytes(16)
+	b.SetBytes(4096)
 	for i := 0; i < b.N; i++ {
 		enc.CryptBlocks(p, p)
 	}
@@ -61,7 +55,7 @@ func BenchmarkCBCStdEncrypto(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	sp := make([]byte, 16)
+	sp := make([]byte, 4096)
 	se := cipher.NewCBCEncrypter(block, []byte(c))
 	if err != nil {
 		b.Fatal(err)
@@ -69,7 +63,7 @@ func BenchmarkCBCStdEncrypto(b *testing.B) {
 
 	b.ResetTimer()
 	b.ReportAllocs()
-	b.SetBytes(16)
+	b.SetBytes(4096)
 	for i := 0; i < b.N; i++ {
 		se.CryptBlocks(sp, sp)
 	}
