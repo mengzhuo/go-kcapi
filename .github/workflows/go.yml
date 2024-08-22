@@ -1,6 +1,3 @@
-# This workflow will build a golang project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
-
 name: Go
 
 on:
@@ -26,11 +23,18 @@ jobs:
 
     - name: Test
       run: go test -v ./...
+
   test-riscv:
     runs-on:
       - riscv-builders
       - soc-spacemit-k1
     steps:
     - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.22'
+
     - name: Test
       run: go test -v ./...
