@@ -39,6 +39,8 @@ var shashTab = []shash{
 		System{"openssl", 1, []string{"dgst", "-sha3-384"}}},
 	{"sha3-512", "sha3_512", "SHA-3 512 bits hash algorithm", 72, 64,
 		System{"openssl", 1, []string{"dgst", "-sha3-512"}}},
+	{"blake2b-512", "blake2b512", "Blake2b 512 bits hash algorithm", 128, 64,
+		System{"b2sum", 0, nil}},
 }
 
 var (
