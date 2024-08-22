@@ -23,7 +23,7 @@ func (b *BlockMode) BlockSize() int {
 	return b.Block.Size
 }
 
-func (b *BlockMode) CryptoBlock(dst, src []byte) {
+func (b *BlockMode) CryptBlocks(dst, src []byte) {
 	ml := min(len(dst), len(src))
 	if ml%b.Block.Size != 0 || ml < b.Block.Size {
 		panic("invalid data")
