@@ -1,4 +1,4 @@
-package {{.Package}}_test
+package sha3_256_test
 
 import (
 	"bytes"
@@ -9,14 +9,13 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/mengzhuo/go-kcapi/{{.Package}}"
+	"github.com/mengzhuo/go-kcapi/sha3_256"
 )
 
-
-func TestSHash{{ .Package | title }}(t *testing.T) {
+func TestSHashSHA3_256(t *testing.T) {
 	buf := make([]byte, os.Getpagesize())
 	rand.Read(buf)
-	kh, err := {{.Package}}.New()
+	kh, err := sha3_256.New()
 	if err != nil {
 		t.Skip(err)
 	}
@@ -24,17 +23,17 @@ func TestSHash{{ .Package | title }}(t *testing.T) {
 	kh.Write(buf) // double write for msg handle
 	khr := kh.Sum(nil)
 
-	cmd := exec.Command("{{.System.Command}}"{{ if .System.Args }}, {{ range .System.Args}}"{{.}}",{{end}}{{end}})
+	cmd := exec.Command("openssl", "dgst", "-sha3-256")
 	cmd.Stdin = bytes.NewReader(bytes.Repeat(buf, 2))
 	out, _ := cmd.Output()
-	f := string(bytes.Fields(out)[{{.System.Field}}])
+	f := string(bytes.Fields(out)[1])
 	if f != fmt.Sprintf("%x", khr) {
 		t.Errorf("%s != %x", f, khr)
 	}
 }
 
-func TestSHash{{ .Package | title }}File(t *testing.T) {
-	kh, err := {{.Package}}.New()
+func TestSHashSHA3_256File(t *testing.T) {
+	kh, err := sha3_256.New()
 	if err != nil {
 		t.Skip(err)
 	}
@@ -56,12 +55,12 @@ func TestSHash{{ .Package | title }}File(t *testing.T) {
 	io.Copy(kh, tf)
 	khr := kh.Sum(nil)
 
-	out, err := exec.Command("{{.System.Command}}", {{ if .System.Args }}{{range .System.Args}}"{{.}}",{{end}}{{end}}tf.Name()).Output()
+	out, err := exec.Command("openssl", "dgst", "-sha3-256", tf.Name()).Output()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	field := string(bytes.Fields(out)[{{.System.Field}}])
+	field := string(bytes.Fields(out)[1])
 	if field != fmt.Sprintf("%x", khr) {
 		t.Errorf("%s != %x", field, khr)
 	}
@@ -70,11 +69,11 @@ func TestSHash{{ .Package | title }}File(t *testing.T) {
 var bechSize = []int{8, 1024, 8192, 16384}
 var buf = make([]byte, 16384)
 
-func BenchmarkSHash{{.Package | title }}(b *testing.B) {
+func BenchmarkSHashSHA3_256(b *testing.B) {
 	for _, bs := range bechSize {
 		b.Run(fmt.Sprintf("%d", bs), func(b *testing.B) {
 			sum := make([]byte, bs)
-			bench, _ := {{.Package}}.New()
+			bench, _ := sha3_256.New()
 			b.ReportAllocs()
 			b.ResetTimer()
 			b.SetBytes(int64(bs))
@@ -89,7 +88,7 @@ func BenchmarkSHash{{.Package | title }}(b *testing.B) {
 
 var fileSize = []int{1 << 20, 4 << 20, 16 << 20, 64 << 20}
 
-func BenchmarkSHash{{.Package | title }}File(b *testing.B) {
+func BenchmarkSHashSHA3_256File(b *testing.B) {
 	for _, bs := range fileSize {
 		b.Run(fmt.Sprintf("%d", bs), func(b *testing.B) {
 			tmp, err := os.CreateTemp("", "")
@@ -101,7 +100,7 @@ func BenchmarkSHash{{.Package | title }}File(b *testing.B) {
 			io.CopyN(tmp, rand.Reader, int64(bs))
 			tmp.Sync()
 
-			bench, err := {{.Package}}.New()
+			bench, err := sha3_256.New()
 			if err != nil {
 				b.Fatal(err)
 			}
