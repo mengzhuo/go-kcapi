@@ -1,19 +1,20 @@
 package procfs
 
 import (
-	"bytes"
-	"encoding/json"
 	"testing"
 )
 
 func TestDefault(t *testing.T) {
 	cl := Default()
-	buf := bytes.NewBuffer(nil)
-	enc := json.NewEncoder(buf)
-	enc.SetIndent("\t", "  ")
-	err := enc.Encode(cl)
-	if err != nil {
-		t.Fatal(err)
+	if len(cl) == 0 {
+		t.Skip()
+		return
 	}
-	t.Log(buf.String())
+	c := cl[0]
+	if c.Name == "" {
+		t.Error("expecting name")
+	}
+	if c.Type == "" {
+		t.Error("expecting type")
+	}
 }
