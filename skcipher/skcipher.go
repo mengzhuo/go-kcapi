@@ -110,3 +110,21 @@ func NewBlockMode(blk *Block, iv []byte, op int) (b *BlockMode, err error) {
 	}
 	return
 }
+
+func NewCBCEncrypter(name string, key []byte, iv []byte, bs int) (*BlockMode, error) {
+
+	blk, err := NewBlock(name, key, bs)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewBlockMode(blk, iv, unix.ALG_OP_ENCRYPT)
+}
+
+func NewCBCDecrypter(name string, key []byte, iv []byte, bs int) (*BlockMode, error) {
+	blk, err := NewBlock(name, key, bs)
+	if err != nil {
+		return nil, err
+	}
+	return NewBlockMode(blk, iv, unix.ALG_OP_DECRYPT)
+}
