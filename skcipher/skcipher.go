@@ -7,7 +7,6 @@ package skcipher
 
 import (
 	"encoding/binary"
-	"os"
 	"unsafe"
 
 	"github.com/mengzhuo/go-kcapi/internal"
@@ -23,20 +22,27 @@ func (b *BlockMode) BlockSize() int {
 	return b.Block.Size
 }
 
+// CryptBlocks not safe to called concurrently
 func (b *BlockMode) CryptBlocks(dst, src []byte) {
 	ml := min(len(dst), len(src))
 	if ml%b.Block.Size != 0 || ml < b.Block.Size {
 		panic("invalid data")
 	}
-	b.Block.f.Write(src[:ml])
-	b.Block.f.Read(dst[:ml])
+
+	err := unix.Sendto(int(b.Block.bfd), src[:ml], unix.MSG_MORE, b.Block.addr)
+	if err != nil {
+		panic(err)
+	}
+	_, _, err = unix.Recvfrom(int(b.Block.bfd), dst[:ml], 0)
+	if err != nil {
+		panic(err)
+	}
 }
 
 type Block struct {
 	Name string
 	Size int
 	bfd  uintptr
-	f    *os.File
 	addr *unix.SockaddrALG
 }
 
@@ -66,7 +72,6 @@ func NewBlock(name string, key []byte, bs int) (*Block, error) {
 	return &Block{
 		Name: name,
 		bfd:  bfd,
-		f:    os.NewFile(bfd, name),
 		addr: addr,
 		Size: bs,
 	}, nil
