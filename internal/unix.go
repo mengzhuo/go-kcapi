@@ -1,6 +1,8 @@
 package internal
 
 import (
+	"bytes"
+	"encoding/binary"
 	"runtime"
 	"unsafe"
 
@@ -48,4 +50,97 @@ func cmsgAlignOf(salen int) int {
 func Cmsgdata(h *unix.Cmsghdr, offset uintptr) unsafe.Pointer {
 	return unsafe.Pointer(uintptr(unsafe.Pointer(h)) +
 		uintptr(cmsgAlignOf(unix.SizeofCmsghdr)) + offset)
+}
+
+func SendMsgWithData(fd uintptr, data []byte, msgs ...[]byte) error {
+
+	buf := bytes.NewBuffer(nil)
+	for _, msg := range msgs {
+		buf.Write(msg)
+	}
+
+	iov := &unix.Iovec{
+		Len: uint64(len(data)),
+	}
+	if len(data) != 0 {
+		iov.Base = &data[0]
+	}
+
+	msgh := &unix.Msghdr{
+		Control: &buf.Bytes()[0],
+		Iov:     iov,
+	}
+	msgh.SetControllen(buf.Len())
+
+	_, _, errno := unix.Syscall(unix.SYS_SENDMSG, fd,
+		uintptr(unsafe.Pointer(msgh)), 0)
+	if errno != 0 {
+		return unix.Errno(errno)
+	}
+	return nil
+}
+
+func SendMsg(fd uintptr, msgs ...[]byte) error {
+
+	buf := bytes.NewBuffer(nil)
+	for _, msg := range msgs {
+		buf.Write(msg)
+	}
+
+	msgh := &unix.Msghdr{
+		Control: &buf.Bytes()[0],
+	}
+	msgh.SetControllen(buf.Len())
+
+	_, _, errno := unix.Syscall(unix.SYS_SENDMSG, fd,
+		uintptr(unsafe.Pointer(msgh)), 0)
+	if errno != 0 {
+		return unix.Errno(errno)
+	}
+	return nil
+}
+
+func CipherOperation(op int) []byte {
+	const opSize = int(unsafe.Sizeof(int32(0)))
+	opbuf := make([]byte, unix.CmsgSpace(opSize))
+
+	h := (*unix.Cmsghdr)(unsafe.Pointer(&opbuf[0]))
+	h.Level = unix.SOL_ALG
+	h.Type = unix.ALG_SET_OP
+	h.SetLen(unix.CmsgLen(opSize))
+	*(*int32)(Cmsgdata(h, 0)) = int32(op)
+
+	return opbuf
+}
+
+func CipherIV(iv []byte) []byte {
+
+	ivbuf := make([]byte, unix.CmsgSpace(len(iv)+4))
+	h := (*unix.Cmsghdr)(unsafe.Pointer(&ivbuf[0]))
+	h.Level = unix.SOL_ALG
+	h.Type = unix.ALG_SET_IV
+	h.SetLen(unix.CmsgLen(len(iv) + 4))
+	data := unsafe.Slice((*byte)(Cmsgdata(h, 0)), len(iv)+4)
+	binary.LittleEndian.PutUint32(data, uint32(len(iv)))
+	copy(data[4:], iv)
+
+	return ivbuf
+}
+
+func CipherAEADAssocLen(p []byte) []byte {
+
+	if len(p) == 0 {
+		return nil
+	}
+
+	abuf := make([]byte, unix.CmsgSpace(len(p)+4))
+	h := (*unix.Cmsghdr)(unsafe.Pointer(&abuf[0]))
+	h.Level = unix.SOL_ALG
+	h.Type = unix.ALG_SET_AEAD_ASSOCLEN
+	h.SetLen(unix.CmsgLen(len(p) + 4))
+	data := unsafe.Slice((*byte)(Cmsgdata(h, 0)), len(p)+4)
+	binary.LittleEndian.PutUint32(data, uint32(len(p)))
+	copy(data[4:], p)
+
+	return abuf
 }

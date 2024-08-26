@@ -6,9 +6,6 @@
 package skcipher
 
 import (
-	"encoding/binary"
-	"unsafe"
-
 	"github.com/mengzhuo/go-kcapi/internal"
 	"golang.org/x/sys/unix"
 )
@@ -85,35 +82,7 @@ func NewBlockMode(blk *Block, iv []byte, op int) (b *BlockMode, err error) {
 	// There are 2 control messages (OOB) we have to send to sock
 	// 1. SET_OP whether is decrypt or encrypt
 	// 2. IV itself
-	const opSize = int(unsafe.Sizeof(int32(0)))
-	opbuf := make([]byte, unix.CmsgSpace(opSize))
-	h := (*unix.Cmsghdr)(unsafe.Pointer(&opbuf[0]))
-	h.Level = unix.SOL_ALG
-	h.Type = unix.ALG_SET_OP
-	h.SetLen(unix.CmsgLen(opSize))
-	*(*int32)(internal.Cmsgdata(h, 0)) = int32(op)
-
-	ivbuf := make([]byte, unix.CmsgSpace(len(iv)+4))
-	h = (*unix.Cmsghdr)(unsafe.Pointer(&ivbuf[0]))
-	h.Level = unix.SOL_ALG
-	h.Type = unix.ALG_SET_IV
-	h.SetLen(unix.CmsgLen(len(iv) + 4))
-	data := unsafe.Slice((*byte)(internal.Cmsgdata(h, 0)), len(iv)+4)
-	binary.LittleEndian.PutUint32(data, uint32(len(iv)))
-	copy(data[4:], iv)
-
-	oob := append(opbuf, ivbuf...)
-	msg := &unix.Msghdr{
-		Control: &oob[0],
-	}
-	msg.SetControllen(len(oob))
-
-	_, _, errno := unix.Syscall(unix.SYS_SENDMSG, uintptr(blk.bfd),
-		uintptr(unsafe.Pointer(msg)), 0)
-	if errno != 0 {
-		err = unix.Errno(errno)
-	}
-	return
+	return b, internal.SendMsg(blk.bfd, internal.CipherOperation(op), internal.CipherIV(iv))
 }
 
 func NewCBCEncrypter(name string, key []byte, iv []byte, bs int) (*BlockMode, error) {
