@@ -3,11 +3,18 @@ package internal
 import (
 	"bytes"
 	"encoding/binary"
+	"os"
 	"runtime"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
+
+var PageSize = 4096
+
+func init() {
+	PageSize = os.Getpagesize()
+}
 
 // XXX: There are two unexported methods that we need
 
@@ -50,6 +57,18 @@ func cmsgAlignOf(salen int) int {
 func Cmsgdata(h *unix.Cmsghdr, offset uintptr) unsafe.Pointer {
 	return unsafe.Pointer(uintptr(unsafe.Pointer(h)) +
 		uintptr(cmsgAlignOf(unix.SizeofCmsghdr)) + offset)
+}
+
+func DataBuffers(p []byte, blockSize int) (buf [][]byte) {
+	bc := len(p) / blockSize
+	if bc == 0 {
+		bc = 1
+	}
+	buf = make([][]byte, bc)
+	for i := range buf {
+		buf[i] = p[i*blockSize : min(i*blockSize+blockSize, len(p))]
+	}
+	return
 }
 
 func SendMsgWithData(fd uintptr, data []byte, msgs ...[]byte) error {

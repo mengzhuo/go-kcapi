@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"fmt"
 	"testing"
 
 	kaes "github.com/mengzhuo/go-kcapi/aes"
+	"github.com/mengzhuo/go-kcapi/internal"
 )
 
 const c = "abcdefghijklmnop"
@@ -36,17 +38,23 @@ func TestCBCEncrypt(t *testing.T) {
 	}
 }
 
+var benchSize = []int{1024, 4096, 8192, 8192 << 1, 16 * internal.PageSize}
+
 func BenchmarkCBCEncrypto(b *testing.B) {
 	enc, err := kaes.NewCBCEncrypter([]byte(c), []byte(c))
 	if err != nil {
 		b.Fatal(err)
 	}
-	p := make([]byte, 4096)
-	b.ResetTimer()
-	b.ReportAllocs()
-	b.SetBytes(4096)
-	for i := 0; i < b.N; i++ {
-		enc.CryptBlocks(p, p)
+	for _, size := range benchSize {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			p := make([]byte, size)
+			b.ResetTimer()
+			b.ReportAllocs()
+			b.SetBytes(int64(size))
+			for i := 0; i < b.N; i++ {
+				enc.CryptBlocks(p, p)
+			}
+		})
 	}
 }
 
@@ -55,16 +63,19 @@ func BenchmarkCBCStdEncrypto(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	sp := make([]byte, 4096)
 	se := cipher.NewCBCEncrypter(block, []byte(c))
 	if err != nil {
 		b.Fatal(err)
 	}
-
-	b.ResetTimer()
-	b.ReportAllocs()
-	b.SetBytes(4096)
-	for i := 0; i < b.N; i++ {
-		se.CryptBlocks(sp, sp)
+	for _, size := range benchSize {
+		b.Run(fmt.Sprintf("size=%d", size), func(b *testing.B) {
+			sp := make([]byte, size)
+			b.ResetTimer()
+			b.ReportAllocs()
+			b.SetBytes(int64(size))
+			for i := 0; i < b.N; i++ {
+				se.CryptBlocks(sp, sp)
+			}
+		})
 	}
 }

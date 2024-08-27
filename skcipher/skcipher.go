@@ -6,6 +6,8 @@
 package skcipher
 
 import (
+	"fmt"
+
 	"github.com/mengzhuo/go-kcapi/internal"
 	"golang.org/x/sys/unix"
 )
@@ -22,15 +24,27 @@ func (b *BlockMode) BlockSize() int {
 // CryptBlocks not safe to called concurrently
 func (b *BlockMode) CryptBlocks(dst, src []byte) {
 	ml := min(len(dst), len(src))
-	if ml%b.Block.Size != 0 || ml < b.Block.Size {
-		panic("invalid data")
+	if ml%b.Block.Size != 0 {
+		panic("invalid blocksize mod not 0")
 	}
 
-	err := unix.Sendto(int(b.Block.bfd), src[:ml], unix.MSG_MORE, b.Block.addr)
+	if ml < b.Block.Size {
+		panic("invalid data less than blocksize")
+	}
+
+	n, err := unix.SendmsgBuffers(int(b.Block.bfd),
+		internal.DataBuffers(src, internal.PageSize),
+		nil, b.Block.addr, unix.MSG_MORE)
 	if err != nil {
 		panic(err)
 	}
-	_, _, err = unix.Recvfrom(int(b.Block.bfd), dst[:ml], 0)
+	if n != len(src) {
+		panic(fmt.Sprintf("%s:write expect:%d, got:%d", b.Block.Name, len(src), n))
+	}
+	n, _, _, _, err = unix.Recvmsg(int(b.Block.bfd), dst, nil, 0)
+	if n != len(dst) {
+		panic(fmt.Sprintf("%s:read expect:%d, got:%d", b.Block.Name, len(src), n))
+	}
 	if err != nil {
 		panic(err)
 	}
