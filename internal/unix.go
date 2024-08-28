@@ -71,34 +71,6 @@ func DataBuffers(p []byte, blockSize int) (buf [][]byte) {
 	return
 }
 
-func SendMsgWithData(fd uintptr, data []byte, msgs ...[]byte) error {
-
-	buf := bytes.NewBuffer(nil)
-	for _, msg := range msgs {
-		buf.Write(msg)
-	}
-
-	iov := &unix.Iovec{
-		Len: uint64(len(data)),
-	}
-	if len(data) != 0 {
-		iov.Base = &data[0]
-	}
-
-	msgh := &unix.Msghdr{
-		Control: &buf.Bytes()[0],
-		Iov:     iov,
-	}
-	msgh.SetControllen(buf.Len())
-
-	_, _, errno := unix.Syscall(unix.SYS_SENDMSG, fd,
-		uintptr(unsafe.Pointer(msgh)), 0)
-	if errno != 0 {
-		return unix.Errno(errno)
-	}
-	return nil
-}
-
 func SendMsg(fd uintptr, msgs ...[]byte) error {
 
 	buf := bytes.NewBuffer(nil)
@@ -146,20 +118,14 @@ func CipherIV(iv []byte) []byte {
 	return ivbuf
 }
 
-func CipherAEADAssocLen(p []byte) []byte {
+func CipherAEADAssocLen(l int) []byte {
+	const opSize = int(unsafe.Sizeof(uint32(0)))
+	opbuf := make([]byte, unix.CmsgSpace(opSize))
 
-	if len(p) == 0 {
-		return nil
-	}
-
-	abuf := make([]byte, unix.CmsgSpace(len(p)+4))
-	h := (*unix.Cmsghdr)(unsafe.Pointer(&abuf[0]))
+	h := (*unix.Cmsghdr)(unsafe.Pointer(&opbuf[0]))
 	h.Level = unix.SOL_ALG
 	h.Type = unix.ALG_SET_AEAD_ASSOCLEN
-	h.SetLen(unix.CmsgLen(len(p) + 4))
-	data := unsafe.Slice((*byte)(Cmsgdata(h, 0)), len(p)+4)
-	binary.LittleEndian.PutUint32(data, uint32(len(p)))
-	copy(data[4:], p)
-
-	return abuf
+	h.SetLen(unix.CmsgLen(opSize))
+	*(*uint32)(Cmsgdata(h, 0)) = uint32(l)
+	return opbuf
 }
