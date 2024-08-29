@@ -1,3 +1,7 @@
+// Copyright 2024 Meng Zhuo. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package aes_test
 
 import (
@@ -9,6 +13,7 @@ import (
 	"github.com/mengzhuo/go-kcapi/aes"
 )
 
+// Copied and modified from standary library crypto
 var aesGCMTests = []struct {
 	key, nonce, plaintext, ad, result string
 }{
