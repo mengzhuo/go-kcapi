@@ -3,6 +3,7 @@ package aes
 import (
 	"bytes"
 	"errors"
+	"fmt"
 
 	"github.com/mengzhuo/go-kcapi/aead"
 	"github.com/mengzhuo/go-kcapi/internal"
@@ -66,10 +67,7 @@ func (g *GCM) Seal(dst, nonce, plaintext, ad []byte) (r []byte) {
 	oob.Write(internal.CipherIV(nonce))
 	oob.Write(internal.CipherAEADAssocLen(len(ad)))
 
-	pbuf := bytes.NewBuffer(nil)
-	if len(ad) > 0 {
-		pbuf.Write(ad)
-	}
+	pbuf := bytes.NewBuffer(ad)
 	pbuf.Write(plaintext)
 	err := unix.Sendmsg(int(g.h.Opfd),
 		pbuf.Bytes(),
@@ -95,6 +93,39 @@ func (g *GCM) Seal(dst, nonce, plaintext, ad []byte) (r []byte) {
 	return
 }
 
-func (g *GCM) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
-	return nil, nil
+func (g *GCM) Open(dst, nonce, ciphertext, ad []byte) ([]byte, error) {
+
+	if len(nonce) != g.h.NonceSize {
+		return nil, fmt.Errorf("%s: nonce size not matched", g.h.Name)
+	}
+
+	oob := bytes.NewBuffer(internal.CipherOperation(unix.ALG_OP_DECRYPT))
+	oob.Write(internal.CipherIV(nonce))
+	oob.Write(internal.CipherAEADAssocLen(len(ad)))
+
+	pbuf := bytes.NewBuffer(ad)
+	pbuf.Write(ciphertext)
+
+	err := unix.Sendmsg(int(g.h.Opfd),
+		pbuf.Bytes(),
+		oob.Bytes(), g.h.Addr, 0)
+
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("%s: open sendmsg error", g.h.Name), err)
+	}
+
+	rs := len(ad) + len(ciphertext) - g.h.TagSize
+
+	var r []byte
+	if len(dst) >= rs {
+		r = dst[:rs]
+	} else {
+		r = make([]byte, rs)
+	}
+
+	_, err = unix.Read(int(g.h.Opfd), r)
+	if err != nil {
+		return nil, errors.Join(fmt.Errorf("%s: open read error", g.h.Name), err)
+	}
+	return r[len(ad):], nil
 }
