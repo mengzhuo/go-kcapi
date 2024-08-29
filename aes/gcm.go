@@ -70,17 +70,16 @@ func (g *GCM) Seal(dst, nonce, plaintext, ad []byte) (r []byte) {
 	if len(ad) > 0 {
 		pbuf.Write(ad)
 	}
-	if len(plaintext) > 0 {
-		pbuf.Write(plaintext)
-	}
-
+	pbuf.Write(plaintext)
 	err := unix.Sendmsg(int(g.h.Opfd),
-		pbuf.Bytes(), oob.Bytes(), g.h.Addr, 0)
+		pbuf.Bytes(),
+		oob.Bytes(), g.h.Addr, 0)
+
 	if err != nil {
-		panic(err)
+		panic(g.h.Name + " sendmsg error: " + err.Error())
 	}
 
-	rs := g.h.TagSize + len(plaintext)
+	rs := len(ad) + g.h.TagSize + len(plaintext)
 
 	if len(dst) >= rs {
 		r = dst[:rs]
@@ -90,8 +89,9 @@ func (g *GCM) Seal(dst, nonce, plaintext, ad []byte) (r []byte) {
 
 	_, err = unix.Read(int(g.h.Opfd), r)
 	if err != nil {
-		panic(err)
+		panic(g.h.Name + " read error: " + err.Error())
 	}
+	r = r[len(ad):]
 	return
 }
 
