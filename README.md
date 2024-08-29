@@ -28,10 +28,11 @@ func main() {
 
 ### Roadmap
 
+* [x] aead `gcm(aes)`
 * [x] shash
 * [ ] rng
 * [ ] cipher
-* [x] skcipher (aes)
+* [x] skcipher `cbc(aes)`
 * [ ] akcipher
 * [ ] kpp
 * [ ] scomp
