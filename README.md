@@ -31,7 +31,7 @@ func main() {
 * [x] shash
 * [ ] rng
 * [ ] cipher
-* [ ] skcipher
+* [x] skcipher (aes)
 * [ ] akcipher
 * [ ] kpp
 * [ ] scomp
