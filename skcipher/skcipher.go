@@ -58,31 +58,19 @@ type Block struct {
 }
 
 func NewBlock(name string, key []byte, bs int) (*Block, error) {
-	fd, err := unix.Socket(unix.AF_ALG, unix.SOCK_SEQPACKET, 0)
+	opfd, addr, err := internal.NewAlgSock(name, "skcipher",
+		func(fd int) error {
+			return unix.SetsockoptString(fd, unix.SOL_ALG, unix.ALG_SET_KEY, string(key))
+		},
+	)
+
 	if err != nil {
 		return nil, err
-	}
-	defer unix.Close(fd)
-
-	addr := &unix.SockaddrALG{Type: "skcipher", Name: name}
-	err = unix.Bind(fd, addr)
-	if err != nil {
-		return nil, err
-	}
-
-	err = unix.SetsockoptString(fd, unix.SOL_ALG, unix.ALG_SET_KEY, string(key))
-	if err != nil {
-		return nil, err
-	}
-
-	bfd, _, eno := unix.Syscall(unix.SYS_ACCEPT, uintptr(fd), 0, 0)
-	if eno != 0 {
-		return nil, unix.Errno(eno)
 	}
 
 	return &Block{
 		Name: name,
-		bfd:  bfd,
+		bfd:  opfd,
 		addr: addr,
 		Size: bs,
 	}, nil

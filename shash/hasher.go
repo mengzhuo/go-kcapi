@@ -8,6 +8,7 @@ package shash
 import (
 	"os"
 
+	"github.com/mengzhuo/go-kcapi/internal"
 	"golang.org/x/sys/unix"
 )
 
@@ -53,21 +54,10 @@ func (h *Hash) BlockSize() int {
 }
 
 func NewHash(name string, size int, bs int) (*Hash, error) {
-	fd, err := unix.Socket(unix.AF_ALG, unix.SOCK_SEQPACKET, 0)
+
+	hashfd, addr, err := internal.NewAlgSock(name, "hash", nil)
 	if err != nil {
 		return nil, err
-	}
-	defer unix.Close(fd)
-
-	addr := &unix.SockaddrALG{Type: "hash", Name: name}
-	err = unix.Bind(fd, addr)
-	if err != nil {
-		return nil, err
-	}
-
-	hashfd, _, e1 := unix.Syscall(unix.SYS_ACCEPT, uintptr(fd), 0, 0)
-	if e1 != 0 {
-		return nil, unix.Errno(e1)
 	}
 
 	// handler for close
