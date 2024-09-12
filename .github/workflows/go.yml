@@ -16,10 +16,10 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.22'
+        go-version: '1.23'
 
-    - name: Build
-      run: go build -v ./...
+    - name: cat crypto
+      run: cat /proc/crypto
 
     - name: Test
       run: go test -v ./...
@@ -34,7 +34,10 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.22'
+        go-version: '1.23'
+
+    - name: cat crypto
+      run: cat /proc/crypto
 
     - name: Test
       run: go test -v ./...
